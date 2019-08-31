@@ -4,7 +4,7 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
 	<persistence-unit name="sysDefault" transaction-type="JTA">
-		<jta-data-source>bureaucepdb</jta-data-source>
+<!-- 		<jta-data-source>bureaucepdb</jta-data-source> -->
 		<class>br.com.itix.bureaucep.entity.Cep</class>
 		<class>br.com.itix.bureaucep.entity.Log</class>
 		<exclude-unlisted-classes>true</exclude-unlisted-classes>
@@ -12,6 +12,11 @@
 			<property name="hibernate.show_sql" value="true" />
 			<property name="hibernate.enable_lazy_load_no_trans" value="true"/>
 			<property name="javax.persistence.schema-generation.database.action" value="update" /> 
+			
+<!-- 			<property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver" /> -->
+<!-- 			<property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5432/cep"></property> -->
+<!-- 			<property name="javax.persistence.jdbc.user" value="postgres" /> -->
+<!-- 			<property name="javax.persistence.jdbc.password" value="123" /> -->
 		</properties>
 	</persistence-unit>
 </persistence>
