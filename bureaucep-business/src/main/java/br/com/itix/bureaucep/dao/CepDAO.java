@@ -58,7 +58,8 @@ public class CepDAO {
 		}
 	}
 
-	public Cep find(long id) throws Exception {
+//	@SuppressWarnings({ "unchecked" })
+	public Cep find(String id) throws Exception {
 		try {
 
 			return em.find(Cep.class, id);

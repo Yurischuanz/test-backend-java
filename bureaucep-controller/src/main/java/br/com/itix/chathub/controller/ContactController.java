@@ -40,7 +40,7 @@ public class ContactController {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("/findCep")
-	public String find(long id) throws Exception {
+	public String find(String id) throws Exception {
 		Cep cep = new Cep();
 		cep = dao.find(id);
 		this.verifyCep(cep);
@@ -64,7 +64,7 @@ public class ContactController {
 			
 		} else {
 //			efetua a consulta no site http://viacep.com.br/ e salva um novo registro na base de dados
-//			inserindo o log na cosukta
+//			inserindo o log na cosulta
 		}
 	}
 
