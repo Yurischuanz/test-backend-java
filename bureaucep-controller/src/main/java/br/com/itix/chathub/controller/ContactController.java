@@ -1,12 +1,17 @@
 package br.com.itix.chathub.controller;
 
-import java.util.Date;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
@@ -19,9 +24,12 @@ import br.com.itix.bureaucep.entity.Log;
 
 @Path("contact")
 public class ContactController {
-	
+
 	@Inject
-	private CepDAO dao;
+	private CepDAO cepDao;
+
+	@Inject
+	private LogDAO logDao;
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
@@ -32,58 +40,55 @@ public class ContactController {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("/findAllCep")
-	public String findAllCep() throws Exception  {
-		List<Cep> ceps = dao.findAll();
+	public String findAllCep() throws Exception {
+		List<Cep> ceps = cepDao.findAll();
 		return (new Gson()).toJson(ceps);
 	}
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("/findCep")
-	public String find(String id) throws Exception {
-		Cep cep = new Cep();
-		cep = dao.find(id);
-		this.verifyCep(cep);
-		return (new Gson()).toJson("");
-	}
-
-	public void verifyCep(Cep cep) {
-		Date dataAtual = new Date();
-		Date dateAux = new Date();
-		
-		if (cep != null) {
-			dateAux.setMinutes(5);
-			dataAtual.setMinutes(dataAtual.getMinutes() - dateAux.getMinutes());
-			if (dataAtual.getDate() > cep.getDataIncl().getDate()) {
-//				consultar o site http://viacep.com.br/ e atualizar o registro na base de dados
-//				renovando o prazo de validade do mesmo
-//				inserindo o log quando consultar
-			} else {
-				System.out.println("registro é valido e existe na base de dados");
+	@Path("/findCep/{cep}")
+	public String find(@PathParam("cep") String cep) {
+		String result = "";
+		try {
+			result = "";
+			if (cep.length() != 8) {
+				return "O Cep deve conter 8 Registros!";
 			}
-			
-		} else {
-//			efetua a consulta no site http://viacep.com.br/ e salva um novo registro na base de dados
-//			inserindo o log na cosulta
+			Cep cepRetorno = new Cep();
+			cepRetorno = cepDao.find(cep);
+			if (cepRetorno != null) {
+				return this.verifyCep(cepRetorno);
+			} else {
+				Cep novoCep = new Cep();
+				novoCep = this.getSite(cep);
+				if (novoCep != null) {
+					novoCep.setCep(novoCep.getCep().replaceAll("[-.]", ""));
+					novoCep.setDataIncl(LocalDateTime.now());
+					this.salva(novoCep);
+					result = (new Gson()).toJson("Registro novo inserido");
+					result += "\n" + (new Gson()).toJson(novoCep);
+				} else {
+					result = "O Cep informado não Existe!";
+				}
+			}
+			result = (new Gson()).toJson(result);
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+		return result;
 	}
 
 	@POST
 	@Path("/salvaCep")
 	public void salva(Cep cep) throws Exception {
-		dao.salva(cep);
+		cepDao.salva(cep);
 	}
 
 	@POST
 	@Path("/atualizaCep")
 	public void atualiza(Cep cep) throws Exception {
-		dao.atualiza(cep);
-	}
-
-	@POST
-	@Path("/excluiCep")
-	public void exclui(Cep cep) throws Exception {
-		dao.exclui(cep);
+		cepDao.atualiza(cep);
 	}
 
 	// log
@@ -91,38 +96,92 @@ public class ContactController {
 	@GET
 	@Path("/findAllLog")
 	public List<Log> findAllLog() throws Exception {
-		LogDAO dao = new LogDAO();
-		return dao.findAll();
+		return logDao.findAll();
 	}
 
 	@GET
 	@Path("/findLog")
 	public Log findLog(long id) throws Exception {
-		LogDAO dao = new LogDAO();
 		Log log = new Log();
-		log = dao.find(id);
+		log = logDao.find(id);
 		return log;
 	}
 
 	@POST
 	@Path("/salvaLog")
 	public void salva(Log log) throws Exception {
-		LogDAO dao = new LogDAO();
-		dao.salva(log);
+		logDao.salva(log);
 	}
 
-	@POST
-	@Path("/atualizaLog")
-	public void atualiza(Log log) throws Exception {
-		LogDAO dao = new LogDAO();
-		dao.atualiza(log);
+	public String verifyCep(Cep cep) {
+		LocalDateTime dataAtual = LocalDateTime.now();
+
+		String result = "";
+
+		if (cep.getDataIncl() == null || (this.isDataValida(dataAtual, cep.getDataIncl()))) {
+			try {
+				Cep attCep = new Cep();
+				attCep = this.getSite(cep.getCep());
+				attCep.setCep(attCep.getCep().replaceAll("[-.]", ""));
+				attCep.setDataIncl(LocalDateTime.now());
+				this.atualiza(attCep);
+				result = (new Gson()).toJson("Cep atualizado, com o prazo de validade renovado!");
+				result += "\n" + (new Gson()).toJson(attCep);
+			} catch (Exception e) {
+				e.printStackTrace();
+				e.getMessage();
+				result = (new Gson()).toJson("ERRO!");
+			}
+
+		} else {
+			result = (new Gson()).toJson("registro é valido e existe na base de dados");
+			result += "\n" + (new Gson()).toJson(cep);
+		}
+
+		return result;
 	}
 
-	@POST
-	@Path("/excluiLog")
-	public void exclui(Log log) throws Exception {
-		LogDAO dao = new LogDAO();
-		dao.exclui(log);
+	public boolean isDataValida(LocalDateTime dtAtual, LocalDateTime dtRegistro) {
+
+		return dtRegistro.isBefore(dtAtual.minusMinutes(5));
+
+	}
+
+	public Cep getSite(String cep) throws Exception {
+		StringBuilder result = new StringBuilder();
+		Cep res = new Cep();
+
+		try {
+			String site = " http://viacep.com.br/ws/" + cep + "/json";
+			URL url = new URL(site);
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.setRequestMethod("GET");
+
+			BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+			String line;
+			while ((line = rd.readLine()) != null) {
+				result.append(line);
+			}
+
+			Log novoLog = new Log();
+			novoLog.setDtIncl(LocalDateTime.now());
+			novoLog.setRequest(cep);
+			novoLog.setResponse(result.toString());
+			this.salva(novoLog);
+
+			if (result.toString().contains("erro")) {
+				res = null;
+			} else {
+				Gson gson = new Gson();
+				res = gson.fromJson(result.toString(), Cep.class);
+			}
+
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			throw new Exception(ex.getMessage());
+		}
+
+		return res;
 	}
 
 }

@@ -5,19 +5,23 @@ import java.util.List;
 import javax.enterprise.context.RequestScoped;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.transaction.Transactional;
 
 import br.com.itix.bureaucep.entity.Cep;
 
 @RequestScoped
 public class CepDAO {
 	
-	@PersistenceContext(unitName = "sysDefault")
+	@PersistenceContext
 	private EntityManager em;
-
+	
+	
+	@Transactional
 	public void salva(Cep cep) throws Exception {
 		try {
-
+			
 			em.persist(cep);
+			
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -25,6 +29,7 @@ public class CepDAO {
 		}
 	}
 
+	@Transactional
 	public void atualiza(Cep cep) throws Exception {
 		try {
 
@@ -36,18 +41,7 @@ public class CepDAO {
 		}
 	}
 
-	public void exclui(Cep cep) throws Exception {
-		try {
-
-			em.remove(cep);
-
-		} catch (Exception e) {
-			e.printStackTrace();
-			throw new Exception(e.getMessage());
-		}
-	}
-
-	@SuppressWarnings({ "unchecked" })
+	@SuppressWarnings("unchecked")
 	public List<Cep> findAll() throws Exception {
 		try {
 			return em.createQuery("from Cep").getResultList();
@@ -58,7 +52,6 @@ public class CepDAO {
 		}
 	}
 
-//	@SuppressWarnings({ "unchecked" })
 	public Cep find(String id) throws Exception {
 		try {
 
